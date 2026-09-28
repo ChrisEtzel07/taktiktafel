@@ -18,6 +18,9 @@
   <script type="text/babel">
     const { useState, useEffect, useRef } = React;
 
+    // --- FESTES VEREINSLOGO (Dateiname auf GitHub) ---
+    const LOGO_URL = "logo.png";
+
     // --- FORMATIONEN (Basis 0-100%) ---
     const FORMATIONS = {
       "4-3-3": {
@@ -196,8 +199,6 @@
         return saved ? JSON.parse(saved) : [];
       });
 
-      const [logo, setLogo] = useState(() => localStorage.getItem('tb_logo') || null);
-
       const [dragItem, setDragItem] = useState(null);
       const [drawingArrow, setDrawingArrow] = useState(null);
 
@@ -207,7 +208,7 @@
 
       const fieldRef = useRef(null);
 
-      // SPEICHER-EFFEKT: Speichert automatisch jede Änderung
+      // SPEICHER-EFFEKT
       useEffect(() => {
         localStorage.setItem('tb_boardMode', boardMode);
         localStorage.setItem('tb_homeFormation', homeFormation);
@@ -216,18 +217,7 @@
         localStorage.setItem('tb_players', JSON.stringify(players));
         localStorage.setItem('tb_ball', JSON.stringify(ball));
         localStorage.setItem('tb_arrows', JSON.stringify(arrows));
-        if (logo) localStorage.setItem('tb_logo', logo);
-        else localStorage.removeItem('tb_logo');
-      }, [boardMode, homeFormation, awayFormation, notes, players, ball, arrows, logo]);
-
-      const handleLogoUpload = (e) => {
-        const file = e.target.files[0];
-        if (file) {
-          const reader = new FileReader();
-          reader.onloadend = () => setLogo(reader.result);
-          reader.readAsDataURL(file);
-        }
-      };
+      }, [boardMode, homeFormation, awayFormation, notes, players, ball, arrows]);
 
       const handleFormationChange = (team, formation) => {
         let newHome = homeFormation;
@@ -285,7 +275,6 @@
           if (progress >= 1) {
             setProgress(0);
           }
-          // SNAPSHOT DER AKTUELLEN POSITIONEN SPEICHERN
           const map = {};
           players.forEach(p => { map[p.id] = { x: p.x, y: p.y }; });
           map['ball'] = { x: ball.x, y: ball.y };
@@ -350,7 +339,7 @@
 
         if (dragItem) {
           if (progress > 0) setProgress(0);
-          setStartPosMap(null); // Snapshot zurücksetzen, da verschoben wurde
+          setStartPosMap(null);
 
           if (dragItem.id === 'ball') {
             setBall({ id: 'ball', x, y });
@@ -395,7 +384,6 @@
           setBall({ id: 'ball', x: 50, y: 50 });
           setArrows([]);
           setNotes("• Flügel überladen & flach in den Rückraum legen\n• Zweite Bälle vor dem 16er sichern");
-          setLogo(null);
           resetSimulation();
         }
       };
@@ -439,10 +427,13 @@
             ${isMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
           `}>
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                {logo && (
-                  <img src={logo} alt="Team Logo" className="w-8 h-8 object-contain rounded bg-slate-950/50 p-0.5 border border-slate-800" />
-                )}
+              <div className="flex items-center gap-2.5">
+                <img 
+                  src={LOGO_URL} 
+                  alt="Team Logo" 
+                  className="w-9 h-9 object-contain rounded bg-slate-950/50 p-0.5 border border-slate-800"
+                  onError={(e) => { e.target.style.display = 'none'; }}
+                />
                 <div>
                   <h1 className="text-xl font-black text-emerald-400 tracking-tight flex items-center gap-2">
                     ⚽ TAKTIKBOARD PRO
@@ -456,33 +447,6 @@
               >
                 ✕
               </button>
-            </div>
-
-            {/* VEREINS-LOGO HOCHLADEN */}
-            <div className="space-y-1.5 bg-slate-950 p-3 rounded-xl border border-slate-800">
-              <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">Vereins-Logo</label>
-              <div className="flex items-center gap-3">
-                {logo ? (
-                  <div className="relative group w-11 h-11 bg-slate-900 border border-slate-800 rounded-lg p-1 flex items-center justify-center shrink-0">
-                    <img src={logo} alt="Logo" className="max-w-full max-h-full object-contain" />
-                    <button 
-                      onClick={() => setLogo(null)} 
-                      className="absolute -top-1.5 -right-1.5 bg-rose-600 text-white rounded-full w-4 h-4 flex items-center justify-center text-[9px] font-bold shadow"
-                      title="Logo entfernen"
-                    >
-                      ✕
-                    </button>
-                  </div>
-                ) : (
-                  <div className="w-11 h-11 bg-slate-900 border border-dashed border-slate-800 rounded-lg flex items-center justify-center text-slate-600 text-xs shrink-0">
-                    Kein Logo
-                  </div>
-                )}
-                <label className="flex-1 cursor-pointer bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-200 text-xs font-bold py-2 px-3 rounded-xl text-center transition flex items-center justify-center gap-1.5">
-                  🖼️ {logo ? 'Logo Ändern' : 'Logo Hochladen'}
-                  <input type="file" accept="image/*" onChange={handleLogoUpload} className="hidden" />
-                </label>
-              </div>
             </div>
 
             {/* Tafel-Auswahl */}
@@ -595,12 +559,15 @@
                 backgroundImage: 'repeating-linear-gradient(90deg, #15803d 0px, #15803d 70px, #166534 70px, #166534 140px)'
               }}
             >
-              {/* LOGO ON BOARD */}
-              {logo && (
-                <div className="absolute top-3 right-3 sm:top-5 sm:right-5 z-20 pointer-events-none opacity-85 max-w-[45px] max-h-[45px] sm:max-w-[70px] sm:max-h-[70px] filter drop-shadow-lg">
-                  <img src={logo} alt="Vereinslogo" className="w-full h-full object-contain" />
-                </div>
-              )}
+              {/* FESTES LOGO AUF DEM SPIELFELD */}
+              <div className="absolute top-3 right-3 sm:top-5 sm:right-5 z-20 pointer-events-none opacity-85 max-w-[45px] max-h-[45px] sm:max-w-[70px] sm:max-h-[70px] filter drop-shadow-lg">
+                <img 
+                  src={LOGO_URL} 
+                  alt="Vereinslogo" 
+                  className="w-full h-full object-contain" 
+                  onError={(e) => { e.target.style.display = 'none'; }}
+                />
+              </div>
 
               {/* SPIELFELD-LINIEN */}
               <svg className="absolute inset-0 w-full h-full pointer-events-none stroke-white/80 fill-none" strokeWidth="2.5">
