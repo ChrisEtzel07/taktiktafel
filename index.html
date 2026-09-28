@@ -197,14 +197,17 @@
         return { x: mappedX, y: p.y };
       }
       if (mode === 'penalty') {
-        const mappedX = Math.max(10, Math.min(86, (p.x - 50) * 1.5 + 15));
-        return { x: mappedX, y: p.y };
+        // Tor oben bei Y=5%, Anstoß unten bei Y=92%
+        // p.x (0..100) mappen wir auf Y (Höhe), p.y (0..100) mappen wir auf X (Breite)
+        const mappedY = Math.max(8, Math.min(88, 92 - (p.x - 45) * 1.6));
+        const mappedX = Math.max(8, Math.min(92, p.y));
+        return { x: mappedX, y: mappedY };
       }
       return { x: p.x, y: p.y };
     }
 
     function App() {
-      const [isMenuOpen, setIsMenuOpen] = useState(false); // Mobile Menu Drawer
+      const [isMenuOpen, setIsMenuOpen] = useState(false);
       const [boardMode, setBoardMode] = useState('full');
       const [homeFormation, setHomeFormation] = useState('4-3-3');
       const [awayFormation, setAwayFormation] = useState('4-4-2');
@@ -242,7 +245,7 @@
 
       const handleBoardModeChange = (mode) => {
         setBoardMode(mode);
-        if (mode === 'penalty') setBall({ id: 'ball', x: 50, y: 50 });
+        if (mode === 'penalty') setBall({ id: 'ball', x: 50, y: 30 });
         else if (mode === 'half') setBall({ id: 'ball', x: 35, y: 50 });
         else setBall({ id: 'ball', x: 50, y: 50 });
         
@@ -402,7 +405,7 @@
             />
           )}
 
-          {/* SIDEBAR STEUERUNG (Drawer on Mobile, Sidebar on Desktop) */}
+          {/* SIDEBAR STEUERUNG */}
           <div className={`
             fixed lg:static inset-y-0 left-0 z-50
             w-80 sm:w-96 bg-slate-900 border-r border-slate-800 p-5 flex flex-col gap-4 overflow-y-auto shadow-2xl
@@ -521,7 +524,7 @@
             </div>
           </div>
 
-          {/* HAUPTBEREICH: SPIELFELD (Maximierte Fläche auf Mobilgeräten) */}
+          {/* HAUPTBEREICH: SPIELFELD */}
           <div className="flex-1 h-full p-2 sm:p-4 lg:p-8 flex flex-col items-center justify-center relative bg-slate-950 overflow-hidden">
             
             {/* Field Container */}
@@ -529,7 +532,7 @@
               ref={fieldRef}
               onPointerMove={handlePointerMove}
               onPointerUp={handlePointerUp}
-              className="relative w-full max-w-6xl aspect-[1.5/1] bg-emerald-800 rounded-xl sm:rounded-2xl shadow-2xl border-2 sm:border-4 border-slate-800 overflow-hidden cursor-crosshair touch-none select-none"
+              className="relative w-full max-w-6xl aspect-[1.4/1] bg-emerald-800 rounded-xl sm:rounded-2xl shadow-2xl border-2 sm:border-4 border-slate-800 overflow-hidden cursor-crosshair touch-none select-none"
               style={{
                 backgroundImage: 'repeating-linear-gradient(90deg, #15803d 0px, #15803d 70px, #166534 70px, #166534 140px)'
               }}
@@ -569,15 +572,30 @@
 
                 {boardMode === 'penalty' && (
                   <>
-                    <rect x="3%" y="4%" width="94%" height="92%" rx="4" />
-                    <line x1="88%" y1="4%" x2="88%" y2="96%" strokeWidth="3" />
-                    <rect x="88%" y="41.8%" width="8%" height="16.4%" fill="white/15" strokeWidth="2.5" />
-                    <rect x="34%" y="10%" width="54%" height="80%" strokeWidth="3" />
-                    <rect x="69%" y="29.6%" width="19%" height="40.8%" strokeWidth="2.5" />
-                    <circle cx="52%" cy="50%" r="1.2%" fill="white" />
-                    <path d="M 34% 33% A 22% 22% 0 0 0 34% 67%" strokeWidth="2.5" />
-                    <path d="M 88% 10% A 6% 6% 0 0 0 82% 4%" strokeWidth="2" />
-                    <path d="M 88% 90% A 6% 6% 0 0 1 82% 96%" strokeWidth="2" />
+                    {/* Spielfeld-Rand exakt wie im Foto */}
+                    <rect x="5%" y="5%" width="90%" height="87%" rx="2" />
+                    
+                    {/* Tor oben auf der Linie */}
+                    <rect x="44%" y="1.5%" width="12%" height="3.5%" strokeWidth="2" fill="white/10" />
+                    
+                    {/* Fünfmeterraum (kleiner Kasten) */}
+                    <rect x="36%" y="5%" width="28%" height="13%" strokeWidth="2.5" />
+                    
+                    {/* 16-Meter-Raum (großer Kasten) */}
+                    <rect x="22%" y="5%" width="56%" height="32%" strokeWidth="2.5" />
+                    
+                    {/* Elfmeterpunkt */}
+                    <circle cx="50%" cy="26%" r="0.8%" fill="white" />
+                    
+                    {/* Teilkreis unterhalb vom 16er */}
+                    <path d="M 38% 37% A 13% 13% 0 0 0 62% 37%" strokeWidth="2.5" />
+                    
+                    {/* Anstoßkreis unten an der Mittellinie */}
+                    <path d="M 41% 92% A 9% 9% 0 0 1 59% 92%" strokeWidth="2.5" />
+                    <circle cx="50%" cy="92%" r="0.8%" fill="white" />
+                    
+                    {/* Eckkreis oben links */}
+                    <path d="M 5% 8.5% A 3.5% 3.5% 0 0 0 8.5% 5%" strokeWidth="2" />
                   </>
                 )}
               </svg>
