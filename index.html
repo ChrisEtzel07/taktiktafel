@@ -2,7 +2,7 @@
 <html lang="de">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Taktikboard Pro - Interaktive Taktiktafel</title>
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
@@ -12,8 +12,8 @@
   <!-- Babel Compiler -->
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 </head>
-<body class="bg-slate-950 text-white font-sans antialiased h-screen overflow-hidden select-none">
-  <div id="root"></div>
+<body class="bg-slate-950 text-white font-sans antialiased h-screen w-screen overflow-hidden select-none touch-none">
+  <div id="root" class="h-full w-full"></div>
 
   <script type="text/babel">
     const { useState, useEffect, useRef } = React;
@@ -190,51 +190,42 @@
       }
     };
 
-    // Hilfskonvertierung der Spieler-Position je nach Tafel-Modus
     function getBoardPosition(p, mode) {
       if (mode === 'full') return { x: p.x, y: p.y };
-      
       if (mode === 'half') {
-        // Halbfeld: Verschiebt x von 30-100 auf 10-90%
         const mappedX = Math.max(8, Math.min(92, (p.x - 30) * 1.3 + 10));
         return { x: mappedX, y: p.y };
       }
-
       if (mode === 'penalty') {
-        // Strafraum-Fokus: Verschiebt x von 50-100 auf 12-85%
         const mappedX = Math.max(10, Math.min(86, (p.x - 50) * 1.5 + 15));
         return { x: mappedX, y: p.y };
       }
-
       return { x: p.x, y: p.y };
     }
 
     function App() {
-      const [boardMode, setBoardMode] = useState('full'); // 'full', 'half', 'penalty'
+      const [isMenuOpen, setIsMenuOpen] = useState(false); // Mobile Menu Drawer
+      const [boardMode, setBoardMode] = useState('full');
       const [homeFormation, setHomeFormation] = useState('4-3-3');
       const [awayFormation, setAwayFormation] = useState('4-4-2');
-      const [tool, setTool] = useState('select'); // 'select', 'arrow'
-      const [arrowType, setArrowType] = useState('run'); // 'run', 'pass', 'dribble'
+      const [tool, setTool] = useState('select');
+      const [arrowType, setArrowType] = useState('run');
       const [simSpeed, setSimSpeed] = useState(1);
       const [notes, setNotes] = useState("• Flügel überladen & flach in den Rückraum legen\n• Zweite Bälle vor dem 16er sichern");
 
-      // Aktuelle Akteure auf der Tafel
       const [players, setPlayers] = useState(() => FORMATIONS["4-3-3"].home.concat(FORMATIONS["4-4-2"].away));
       const [ball, setBall] = useState({ id: 'ball', x: 50, y: 50 });
       const [arrows, setArrows] = useState([]);
 
-      // Interaction State
       const [dragItem, setDragItem] = useState(null);
       const [drawingArrow, setDrawingArrow] = useState(null);
 
-      // Simulation State
       const [isPlaying, setIsPlaying] = useState(false);
       const [progress, setProgress] = useState(0);
       const [startPosMap, setStartPosMap] = useState(null);
 
       const fieldRef = useRef(null);
 
-      // Formationen wechseln
       const handleFormationChange = (team, formation) => {
         if (team === 'home') {
           setHomeFormation(formation);
@@ -249,10 +240,8 @@
         resetSimulation();
       };
 
-      // Board-Modus wechseln (Anpassen der Grund-Koordinaten)
       const handleBoardModeChange = (mode) => {
         setBoardMode(mode);
-        // Ball neu ausrichten
         if (mode === 'penalty') setBall({ id: 'ball', x: 50, y: 50 });
         else if (mode === 'half') setBall({ id: 'ball', x: 35, y: 50 });
         else setBall({ id: 'ball', x: 50, y: 50 });
@@ -261,7 +250,6 @@
         resetSimulation();
       };
 
-      // Animation Loop für die Simulation
       useEffect(() => {
         let animationFrame;
         if (isPlaying) {
@@ -299,7 +287,6 @@
         return () => cancelAnimationFrame(animationFrame);
       }, [isPlaying, simSpeed, startPosMap, players, ball, boardMode]);
 
-      // Berechnung der animierten Position
       const getAnimatedPos = (item) => {
         const basePos = item.id === 'ball' ? item : getBoardPosition(item, boardMode);
         if (progress === 0 || !startPosMap || !startPosMap[item.id]) {
@@ -314,7 +301,6 @@
         return { x: currentX, y: currentY };
       };
 
-      // Drag & Drop & Zeichnen
       const handlePointerDown = (e, item) => {
         e.stopPropagation();
         if (isPlaying) return;
@@ -386,20 +372,56 @@
       };
 
       return (
-        <div className="flex flex-col lg:flex-row h-screen w-screen overflow-hidden bg-slate-950 text-slate-100">
+        <div className="flex flex-col lg:flex-row h-screen w-screen overflow-hidden bg-slate-950 text-slate-100 relative">
           
-          {/* SIDEBAR STEUERUNG */}
-          <div className="w-full lg:w-96 bg-slate-900 border-r border-slate-800 p-5 flex flex-col gap-4 overflow-y-auto z-20 shadow-2xl">
-            <div>
-              <div className="flex items-center justify-between">
+          {/* MOBILE HEADER BAR */}
+          <div className="lg:hidden bg-slate-900 border-b border-slate-800 px-3 py-2 flex items-center justify-between z-30 shrink-0">
+            <button 
+              onClick={() => setIsMenuOpen(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 rounded-xl text-xs font-bold active:scale-95 transition"
+            >
+              ⚙️ Menü & Taktik
+            </button>
+            <div className="flex items-center gap-2">
+              <button 
+                onClick={() => setIsPlaying(!isPlaying)}
+                className={`px-3 py-1.5 rounded-xl text-xs font-black shadow-md transition active:scale-95 ${
+                  isPlaying ? 'bg-amber-500 text-slate-950' : 'bg-emerald-500 text-slate-950'
+                }`}
+              >
+                {isPlaying ? '⏸️ Pause' : '▶️ Play'}
+              </button>
+            </div>
+          </div>
+
+          {/* MOBILE BACKDROP OVERLAY */}
+          {isMenuOpen && (
+            <div 
+              onClick={() => setIsMenuOpen(false)}
+              className="fixed inset-0 bg-black/70 backdrop-blur-sm z-40 lg:hidden"
+            />
+          )}
+
+          {/* SIDEBAR STEUERUNG (Drawer on Mobile, Sidebar on Desktop) */}
+          <div className={`
+            fixed lg:static inset-y-0 left-0 z-50
+            w-80 sm:w-96 bg-slate-900 border-r border-slate-800 p-5 flex flex-col gap-4 overflow-y-auto shadow-2xl
+            transition-transform duration-300 ease-in-out
+            ${isMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
+          `}>
+            <div className="flex items-center justify-between">
+              <div>
                 <h1 className="text-xl font-black text-emerald-400 tracking-tight flex items-center gap-2">
                   ⚽ TAKTIKBOARD PRO
                 </h1>
-                <span className="bg-emerald-500/10 text-emerald-400 text-[10px] font-bold px-2 py-0.5 rounded-full border border-emerald-500/20">
-                  v2.2
-                </span>
+                <p className="text-xs text-slate-400 mt-0.5">Ganzes Feld, Halbfeld & Strafraum</p>
               </div>
-              <p className="text-xs text-slate-400 mt-1">Ganzes Feld, Halbfeld & Strafraum-Tafel</p>
+              <button 
+                onClick={() => setIsMenuOpen(false)}
+                className="lg:hidden text-slate-400 hover:text-white p-1.5 rounded-lg bg-slate-800 border border-slate-700"
+              >
+                ✕
+              </button>
             </div>
 
             {/* Tafel-Auswahl */}
@@ -412,7 +434,7 @@
               </div>
             </div>
 
-            {/* Formationen Wählen (Wieder eingebaut!) */}
+            {/* Formationen Wählen */}
             <div className="space-y-2.5 bg-slate-950 p-3 rounded-xl border border-slate-800">
               <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">Aufstellungen / Formationen</label>
               <div className="space-y-2">
@@ -499,23 +521,21 @@
             </div>
           </div>
 
-          {/* HAUPTBEREICH: SPIELFELD MIT KORREKTEN PROPORTIONEN */}
-          <div className="flex-1 h-full p-4 lg:p-8 flex flex-col items-center justify-center relative bg-slate-950 overflow-hidden">
+          {/* HAUPTBEREICH: SPIELFELD (Maximierte Fläche auf Mobilgeräten) */}
+          <div className="flex-1 h-full p-2 sm:p-4 lg:p-8 flex flex-col items-center justify-center relative bg-slate-950 overflow-hidden">
             
             {/* Field Container */}
             <div 
               ref={fieldRef}
               onPointerMove={handlePointerMove}
               onPointerUp={handlePointerUp}
-              className="relative w-full max-w-6xl aspect-[1.5/1] bg-emerald-800 rounded-2xl shadow-2xl border-4 border-slate-800 overflow-hidden cursor-crosshair touch-none select-none"
+              className="relative w-full max-w-6xl aspect-[1.5/1] bg-emerald-800 rounded-xl sm:rounded-2xl shadow-2xl border-2 sm:border-4 border-slate-800 overflow-hidden cursor-crosshair touch-none select-none"
               style={{
                 backgroundImage: 'repeating-linear-gradient(90deg, #15803d 0px, #15803d 70px, #166534 70px, #166534 140px)'
               }}
             >
-              {/* PERFEKT PROPORTIONIERTE SPIELFELD-LINIEN */}
+              {/* SPIELFELD-LINIEN */}
               <svg className="absolute inset-0 w-full h-full pointer-events-none stroke-white/80 fill-none" strokeWidth="2.5">
-                
-                {/* 1. GANZES FELD TAFEL */}
                 {boardMode === 'full' && (
                   <>
                     <rect x="3%" y="4%" width="94%" height="92%" rx="4" />
@@ -533,49 +553,29 @@
                   </>
                 )}
 
-                {/* 2. HALBFELD TAFEL */}
                 {boardMode === 'half' && (
                   <>
                     <rect x="3%" y="4%" width="94%" height="92%" rx="4" />
-                    {/* Mittellinie links */}
                     <line x1="3%" y1="4%" x2="3%" y2="96%" strokeWidth="4" />
                     <path d="M 3% 26% A 24% 24% 0 0 1 3% 74%" />
                     <circle cx="3%" cy="50%" r="0.9%" fill="white" />
-                    {/* Tor & Netz rechts */}
                     <rect x="93%" y="41.8%" width="4%" height="16.4%" fill="white/10" strokeWidth="2" />
-                    {/* Strafraum rechts */}
                     <rect x="61%" y="10%" width="32%" height="80%" />
-                    {/* Fünfmeterraum */}
                     <rect x="81%" y="30%" width="12%" height="40%" />
-                    {/* Elfmeterpunkt */}
                     <circle cx="75%" cy="50%" r="0.9%" fill="white" />
-                    {/* Teilkreis */}
                     <path d="M 61% 32% A 20% 20% 0 0 0 61% 68%" />
                   </>
                 )}
 
-                {/* 3. STRAFRAUM FOKUS TAFEL (REALISTISCHE FOOTBALL-PROPORTIONEN) */}
                 {boardMode === 'penalty' && (
                   <>
                     <rect x="3%" y="4%" width="94%" height="92%" rx="4" />
-                    
-                    {/* Grundlinie & Tor mit Netz */}
                     <line x1="88%" y1="4%" x2="88%" y2="96%" strokeWidth="3" />
                     <rect x="88%" y="41.8%" width="8%" height="16.4%" fill="white/15" strokeWidth="2.5" />
-
-                    {/* 16-Meter-Raum (Strafraum) */}
                     <rect x="34%" y="10%" width="54%" height="80%" strokeWidth="3" />
-
-                    {/* 5-Meter-Raum (Torraum) */}
                     <rect x="69%" y="29.6%" width="19%" height="40.8%" strokeWidth="2.5" />
-
-                    {/* Elfmeterpunkt (11 Meter vor dem Tor) */}
                     <circle cx="52%" cy="50%" r="1.2%" fill="white" />
-
-                    {/* Teilkreis am 16er (Radius 9.15m vom Elfmeterpunkt) */}
                     <path d="M 34% 33% A 22% 22% 0 0 0 34% 67%" strokeWidth="2.5" />
-
-                    {/* Eckfahnen-Kreisbögen */}
                     <path d="M 88% 10% A 6% 6% 0 0 0 82% 4%" strokeWidth="2" />
                     <path d="M 88% 90% A 6% 6% 0 0 1 82% 96%" strokeWidth="2" />
                   </>
@@ -629,14 +629,14 @@
                     key={p.id}
                     onPointerDown={(e) => handlePointerDown(e, p)}
                     style={{ left: `${pos.x}%`, top: `${pos.y}%` }}
-                    className={`absolute -translate-x-1/2 -translate-y-1/2 w-8 h-8 md:w-10 md:h-10 rounded-full flex items-center justify-center font-black text-xs md:text-sm shadow-2xl cursor-grab active:cursor-grabbing z-20 border-2 transition-transform duration-75 hover:scale-110 ${
+                    className={`absolute -translate-x-1/2 -translate-y-1/2 w-7 h-7 sm:w-9 sm:h-9 md:w-10 md:h-10 rounded-full flex items-center justify-center font-black text-[10px] sm:text-xs md:text-sm shadow-2xl cursor-grab active:cursor-grabbing z-20 border-2 transition-transform duration-75 active:scale-125 ${
                       isHome 
                         ? 'bg-emerald-600 text-white border-emerald-300 shadow-emerald-950/80 ring-2 ring-emerald-500/30' 
                         : 'bg-zinc-950 text-white border-zinc-500 shadow-black/90 ring-2 ring-zinc-400/20'
                     }`}
                   >
                     {p.num}
-                    <span className="absolute -bottom-4 text-[9px] font-bold bg-slate-950/90 text-slate-300 px-1 rounded border border-slate-800 pointer-events-none">
+                    <span className="absolute -bottom-3.5 sm:-bottom-4 text-[8px] sm:text-[9px] font-bold bg-slate-950/90 text-slate-300 px-1 rounded border border-slate-800 pointer-events-none">
                       {p.role}
                     </span>
                   </div>
@@ -650,7 +650,7 @@
                   <div
                     onPointerDown={(e) => handlePointerDown(e, ball)}
                     style={{ left: `${ballPos.x}%`, top: `${ballPos.y}%` }}
-                    className="absolute -translate-x-1/2 -translate-y-1/2 w-6 h-6 bg-white border-2 border-slate-900 rounded-full shadow-2xl cursor-grab active:cursor-grabbing z-30 flex items-center justify-center text-xs hover:scale-125 transition-transform"
+                    className="absolute -translate-x-1/2 -translate-y-1/2 w-5 h-5 sm:w-6 sm:h-6 bg-white border-2 border-slate-900 rounded-full shadow-2xl cursor-grab active:cursor-grabbing z-30 flex items-center justify-center text-[10px] sm:text-xs active:scale-125 transition-transform"
                   >
                     ⚽
                   </div>
@@ -660,8 +660,8 @@
             </div>
 
             {/* ZEITACHSEN SLIDER */}
-            <div className="w-full max-w-6xl mt-4 flex items-center gap-4 bg-slate-900 p-3 rounded-xl border border-slate-800">
-              <span className="text-xs font-bold text-slate-400">ZEITACHSE</span>
+            <div className="w-full max-w-6xl mt-2 sm:mt-4 flex items-center gap-2 sm:gap-4 bg-slate-900 p-2 sm:p-3 rounded-xl border border-slate-800">
+              <span className="text-[10px] sm:text-xs font-bold text-slate-400">ZEIT</span>
               <input 
                 type="range" 
                 min="0" 
@@ -674,7 +674,7 @@
                 }}
                 className="flex-1 accent-emerald-500 h-2 bg-slate-950 rounded-lg cursor-pointer"
               />
-              <span className="text-xs font-mono font-bold text-emerald-400 w-12 text-right">
+              <span className="text-[10px] sm:text-xs font-mono font-bold text-emerald-400 w-10 sm:w-12 text-right">
                 {Math.round(progress * 100)}%
               </span>
             </div>
