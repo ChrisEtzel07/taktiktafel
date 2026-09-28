@@ -18,7 +18,7 @@
   <script type="text/babel">
     const { useState, useEffect, useRef } = React;
 
-    // --- FORMATIONEN (Base-Koordinaten in %) ---
+    // --- FORMATIONEN (Basis 0-100%) ---
     const FORMATIONS = {
       "4-3-3": {
         home: [
@@ -131,77 +131,42 @@
           { id: 'a10', num: 9, role: 'ST', x: 53, y: 62 },
           { id: 'a11', num: 14, role: 'ST', x: 53, y: 38 }
         ]
-      },
-      "5-3-2": {
-        home: [
-          { id: 'h1', num: 1, role: 'TW', x: 5, y: 50 },
-          { id: 'h2', num: 2, role: 'RV', x: 20, y: 12 },
-          { id: 'h3', num: 4, role: 'IV', x: 16, y: 30 },
-          { id: 'h4', num: 5, role: 'IV', x: 14, y: 50 },
-          { id: 'h5', num: 6, role: 'IV', x: 16, y: 70 },
-          { id: 'h6', num: 3, role: 'LV', x: 20, y: 88 },
-          { id: 'h7', num: 8, role: 'ZM', x: 30, y: 30 },
-          { id: 'h8', num: 10, role: 'ZM', x: 28, y: 50 },
-          { id: 'h9', num: 7, role: 'ZM', x: 30, y: 70 },
-          { id: 'h10', num: 9, role: 'ST', x: 45, y: 40 },
-          { id: 'h11', num: 11, role: 'ST', x: 45, y: 60 }
-        ],
-        away: [
-          { id: 'a1', num: 1, role: 'TW', x: 95, y: 50 },
-          { id: 'a2', num: 2, role: 'RV', x: 80, y: 88 },
-          { id: 'a3', num: 4, role: 'IV', x: 84, y: 70 },
-          { id: 'a4', num: 5, role: 'IV', x: 86, y: 50 },
-          { id: 'a5', num: 6, role: 'IV', x: 84, y: 30 },
-          { id: 'a6', num: 3, role: 'LV', x: 80, y: 12 },
-          { id: 'a7', num: 8, role: 'ZM', x: 70, y: 70 },
-          { id: 'a8', num: 10, role: 'ZM', x: 72, y: 50 },
-          { id: 'a9', num: 7, role: 'ZM', x: 70, y: 30 },
-          { id: 'a10', num: 9, role: 'ST', x: 55, y: 60 },
-          { id: 'a11', num: 11, role: 'ST', x: 55, y: 40 }
-        ]
-      },
-      "4-1-4-1": {
-        home: [
-          { id: 'h1', num: 1, role: 'TW', x: 5, y: 50 },
-          { id: 'h2', num: 2, role: 'RV', x: 22, y: 15 },
-          { id: 'h3', num: 4, role: 'IV', x: 18, y: 38 },
-          { id: 'h4', num: 5, role: 'IV', x: 18, y: 62 },
-          { id: 'h5', num: 3, role: 'LV', x: 22, y: 85 },
-          { id: 'h6', num: 6, role: '6er', x: 28, y: 50 },
-          { id: 'h7', num: 7, role: 'RM', x: 40, y: 15 },
-          { id: 'h8', num: 8, role: 'ZM', x: 38, y: 38 },
-          { id: 'h9', num: 10, role: 'ZM', x: 38, y: 62 },
-          { id: 'h10', num: 11, role: 'LM', x: 40, y: 85 },
-          { id: 'h11', num: 9, role: 'ST', x: 48, y: 50 }
-        ],
-        away: [
-          { id: 'a1', num: 1, role: 'TW', x: 95, y: 50 },
-          { id: 'a2', num: 2, role: 'RV', x: 78, y: 85 },
-          { id: 'a3', num: 4, role: 'IV', x: 82, y: 62 },
-          { id: 'a4', num: 5, role: 'IV', x: 82, y: 38 },
-          { id: 'a5', num: 3, role: 'LV', x: 78, y: 15 },
-          { id: 'a6', num: 6, role: '6er', x: 72, y: 50 },
-          { id: 'a7', num: 7, role: 'RM', x: 60, y: 85 },
-          { id: 'a8', num: 8, role: 'ZM', x: 62, y: 62 },
-          { id: 'a9', num: 10, role: 'ZM', x: 62, y: 38 },
-          { id: 'a10', num: 11, role: 'LM', x: 60, y: 15 },
-          { id: 'a11', num: 9, role: 'ST', x: 52, y: 50 }
-        ]
       }
     };
 
-    function getBoardPosition(p, mode) {
-      if (mode === 'full') return { x: p.x, y: p.y };
+    function mapFormationToMode(homeForm, awayForm, mode) {
+      const homeBase = FORMATIONS[homeForm]?.home || FORMATIONS["4-3-3"].home;
+      const awayBase = FORMATIONS[awayForm]?.away || FORMATIONS["4-4-2"].away;
+
       if (mode === 'half') {
-        const mappedX = Math.max(8, Math.min(92, (p.x - 30) * 1.3 + 10));
-        return { x: mappedX, y: p.y };
+        return [
+          ...homeBase.map(p => ({ ...p, x: Math.round((p.x * 0.75 + 10) * 10) / 10 })),
+          ...awayBase.map(p => ({ ...p, x: Math.round((p.x * 0.75 + 10) * 10) / 10 }))
+        ];
       }
+
       if (mode === 'penalty') {
-        const mappedY = Math.max(8, Math.min(88, 92 - (p.x - 45) * 1.6));
-        const mappedX = Math.max(8, Math.min(92, p.y));
-        return { x: mappedX, y: mappedY };
+        return [
+          ...homeBase.map(p => ({
+            ...p,
+            x: Math.round((15 + p.y * 0.7) * 10) / 10,
+            y: Math.round((85 - p.x * 0.7) * 10) / 10
+          })),
+          ...awayBase.map(p => ({
+            ...p,
+            x: Math.round((15 + p.y * 0.7) * 10) / 10,
+            y: Math.round((15 + (100 - p.x) * 0.7) * 10) / 10
+          }))
+        ];
       }
-      return { x: p.x, y: p.y };
+
+      return [...homeBase.map(p => ({ ...p })), ...awayBase.map(p => ({ ...p }))];
+    }
+
+    function getDefaultBall(mode) {
+      if (mode === 'penalty') return { id: 'ball', x: 50, y: 30 };
+      if (mode === 'half') return { id: 'ball', x: 35, y: 50 };
+      return { id: 'ball', x: 50, y: 50 };
     }
 
     function App() {
@@ -218,7 +183,7 @@
 
       const [players, setPlayers] = useState(() => {
         const saved = localStorage.getItem('tb_players');
-        return saved ? JSON.parse(saved) : FORMATIONS["4-3-3"].home.concat(FORMATIONS["4-4-2"].away);
+        return saved ? JSON.parse(saved) : mapFormationToMode('4-3-3', '4-4-2', 'full');
       });
 
       const [ball, setBall] = useState(() => {
@@ -259,50 +224,38 @@
         const file = e.target.files[0];
         if (file) {
           const reader = new FileReader();
-          reader.onloadend = () => {
-            setLogo(reader.result);
-          };
+          reader.onloadend = () => setLogo(reader.result);
           reader.readAsDataURL(file);
         }
       };
 
       const handleFormationChange = (team, formation) => {
+        let newHome = homeFormation;
+        let newAway = awayFormation;
         if (team === 'home') {
           setHomeFormation(formation);
-          const newHome = FORMATIONS[formation].home;
-          setPlayers(prev => newHome.concat(prev.filter(p => p.id.startsWith('a'))));
+          newHome = formation;
         } else {
           setAwayFormation(formation);
-          const newAway = FORMATIONS[formation].away;
-          setPlayers(prev => prev.filter(p => p.id.startsWith('h')).concat(newAway));
+          newAway = formation;
         }
+        setPlayers(mapFormationToMode(newHome, newAway, boardMode));
         setArrows([]);
         resetSimulation();
       };
 
       const handleBoardModeChange = (mode) => {
         setBoardMode(mode);
-        if (mode === 'penalty') setBall({ id: 'ball', x: 50, y: 30 });
-        else if (mode === 'half') setBall({ id: 'ball', x: 35, y: 50 });
-        else setBall({ id: 'ball', x: 50, y: 50 });
-        
+        setPlayers(mapFormationToMode(homeFormation, awayFormation, mode));
+        setBall(getDefaultBall(mode));
         setArrows([]);
         resetSimulation();
       };
 
+      // ANIMATIONS-SCHLEIFE
       useEffect(() => {
         let animationFrame;
         if (isPlaying) {
-          if (!startPosMap) {
-            const initialMap = {};
-            players.forEach(p => { 
-              const pos = getBoardPosition(p, boardMode);
-              initialMap[p.id] = { x: pos.x, y: pos.y }; 
-            });
-            initialMap['ball'] = { x: ball.x, y: ball.y };
-            setStartPosMap(initialMap);
-          }
-
           let lastTime = performance.now();
           const baseDuration = 2500 / simSpeed;
 
@@ -325,20 +278,41 @@
           animationFrame = requestAnimationFrame(animate);
         }
         return () => cancelAnimationFrame(animationFrame);
-      }, [isPlaying, simSpeed, startPosMap, players, ball, boardMode]);
+      }, [isPlaying, simSpeed]);
+
+      const handleTogglePlay = () => {
+        if (!isPlaying) {
+          if (progress >= 1) {
+            setProgress(0);
+          }
+          // SNAPSHOT DER AKTUELLEN POSITIONEN SPEICHERN
+          const map = {};
+          players.forEach(p => { map[p.id] = { x: p.x, y: p.y }; });
+          map['ball'] = { x: ball.x, y: ball.y };
+          setStartPosMap(map);
+          setIsPlaying(true);
+        } else {
+          setIsPlaying(false);
+        }
+      };
 
       const getAnimatedPos = (item) => {
-        const basePos = item.id === 'ball' ? item : getBoardPosition(item, boardMode);
         if (progress === 0 || !startPosMap || !startPosMap[item.id]) {
-          return basePos;
+          return { x: item.x, y: item.y };
         }
         const start = startPosMap[item.id];
         const arrow = arrows.find(a => a.targetId === item.id);
-        if (!arrow) return basePos;
+        if (!arrow) return { x: start.x, y: start.y };
 
         const currentX = start.x + (arrow.endX - start.x) * progress;
         const currentY = start.y + (arrow.endY - start.y) * progress;
         return { x: currentX, y: currentY };
+      };
+
+      const getArrowStartPos = (arrow) => {
+        if (arrow.targetId === 'ball') return { x: ball.x, y: ball.y };
+        const player = players.find(p => p.id === arrow.targetId);
+        return player ? { x: player.x, y: player.y } : { x: 50, y: 50 };
       };
 
       const handlePointerDown = (e, item) => {
@@ -348,18 +322,16 @@
         const rect = fieldRef.current.getBoundingClientRect();
         const clientX = e.touches ? e.touches[0].clientX : e.clientX;
         const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-        const startX = Math.max(0, Math.min(100, ((clientX - rect.left) / rect.width) * 100));
-        const startY = Math.max(0, Math.min(100, ((clientY - rect.top) / rect.height) * 100));
-
-        const pos = item.id === 'ball' ? item : getBoardPosition(item, boardMode);
+        const startX = Math.max(2, Math.min(98, ((clientX - rect.left) / rect.width) * 100));
+        const startY = Math.max(2, Math.min(98, ((clientY - rect.top) / rect.height) * 100));
 
         if (tool === 'select') {
           setDragItem({ id: item.id });
         } else if (tool === 'arrow') {
           setDrawingArrow({
             targetId: item.id,
-            startX: pos.x,
-            startY: pos.y,
+            startX: item.x,
+            startY: item.y,
             currentX: startX,
             currentY: startY,
             type: arrowType
@@ -368,21 +340,25 @@
       };
 
       const handlePointerMove = (e) => {
-        if (isPlaying) return;
+        if (isPlaying || (!dragItem && !drawingArrow)) return;
+
         const rect = fieldRef.current.getBoundingClientRect();
         const clientX = e.touches ? e.touches[0].clientX : e.clientX;
         const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-        const x = Math.max(0, Math.min(100, ((clientX - rect.left) / rect.width) * 100));
-        const y = Math.max(0, Math.min(100, ((clientY - rect.top) / rect.height) * 100));
+        const x = Math.max(2, Math.min(98, ((clientX - rect.left) / rect.width) * 100));
+        const y = Math.max(2, Math.min(98, ((clientY - rect.top) / rect.height) * 100));
 
         if (dragItem) {
+          if (progress > 0) setProgress(0);
+          setStartPosMap(null); // Snapshot zurücksetzen, da verschoben wurde
+
           if (dragItem.id === 'ball') {
             setBall({ id: 'ball', x, y });
           } else {
-            setPlayers(players.map(p => p.id === dragItem.id ? { ...p, x, y } : p));
+            setPlayers(prev => prev.map(p => p.id === dragItem.id ? { ...p, x, y } : p));
           }
         } else if (drawingArrow) {
-          setDrawingArrow({ ...drawingArrow, currentX: x, currentY: y });
+          setDrawingArrow(prev => prev ? { ...prev, currentX: x, currentY: y } : null);
         }
       };
 
@@ -394,8 +370,6 @@
             {
               id: Date.now(),
               targetId: drawingArrow.targetId,
-              startX: drawingArrow.startX,
-              startY: drawingArrow.startY,
               endX: drawingArrow.currentX,
               endY: drawingArrow.currentY,
               type: drawingArrow.type
@@ -412,12 +386,12 @@
       };
 
       const handleFullReset = () => {
-        if (window.confirm("Möchtest du das gesamte Board und alle gespeicherten Laufwege/Notizen auf Werkseinstellungen zurücksetzen?")) {
+        if (window.confirm("Möchtest du das gesamte Board und alle gespeicherten Aufstellungen & Wege zurücksetzen?")) {
           localStorage.clear();
           setBoardMode('full');
           setHomeFormation('4-3-3');
           setAwayFormation('4-4-2');
-          setPlayers(FORMATIONS["4-3-3"].home.concat(FORMATIONS["4-4-2"].away));
+          setPlayers(mapFormationToMode('4-3-3', '4-4-2', 'full'));
           setBall({ id: 'ball', x: 50, y: 50 });
           setArrows([]);
           setNotes("• Flügel überladen & flach in den Rückraum legen\n• Zweite Bälle vor dem 16er sichern");
@@ -439,7 +413,7 @@
             </button>
             <div className="flex items-center gap-2">
               <button 
-                onClick={() => setIsPlaying(!isPlaying)}
+                onClick={handleTogglePlay}
                 className={`px-3 py-1.5 rounded-xl text-xs font-black shadow-md transition active:scale-95 ${
                   isPlaying ? 'bg-amber-500 text-slate-950' : 'bg-emerald-500 text-slate-950'
                 }`}
@@ -589,7 +563,7 @@
               </div>
 
               <button 
-                onClick={() => setIsPlaying(!isPlaying)} 
+                onClick={handleTogglePlay} 
                 className={`w-full py-3 rounded-xl font-black text-sm flex items-center justify-center gap-2 shadow-xl transition transform active:scale-95 ${
                   isPlaying ? 'bg-amber-500 hover:bg-amber-400 text-slate-950' : 'bg-emerald-500 hover:bg-emerald-400 text-slate-950'
                 }`}
@@ -621,7 +595,7 @@
                 backgroundImage: 'repeating-linear-gradient(90deg, #15803d 0px, #15803d 70px, #166534 70px, #166534 140px)'
               }}
             >
-              {/* LOGO ON BOARD (Oben rechts auf der Taktiktafel) */}
+              {/* LOGO ON BOARD */}
               {logo && (
                 <div className="absolute top-3 right-3 sm:top-5 sm:right-5 z-20 pointer-events-none opacity-85 max-w-[45px] max-h-[45px] sm:max-w-[70px] sm:max-h-[70px] filter drop-shadow-lg">
                   <img src={logo} alt="Vereinslogo" className="w-full h-full object-contain" />
@@ -690,17 +664,20 @@
                   </marker>
                 </defs>
                 
-                {arrows.map(a => (
-                  <line 
-                    key={a.id}
-                    x1={`${a.startX}%`} y1={`${a.startY}%`}
-                    x2={`${a.endX}%`} y2={`${a.endY}%`}
-                    stroke={a.type === 'run' ? '#38bdf8' : a.type === 'pass' ? '#f59e0b' : '#ec4899'}
-                    strokeWidth="3.5"
-                    strokeDasharray={a.type === 'pass' ? '6,6' : a.type === 'dribble' ? '2,4' : 'none'}
-                    markerEnd={`url(#arrow-${a.type})`}
-                  />
-                ))}
+                {arrows.map(a => {
+                  const start = getArrowStartPos(a);
+                  return (
+                    <line 
+                      key={a.id}
+                      x1={`${start.x}%`} y1={`${start.y}%`}
+                      x2={`${a.endX}%`} y2={`${a.endY}%`}
+                      stroke={a.type === 'run' ? '#38bdf8' : a.type === 'pass' ? '#f59e0b' : '#ec4899'}
+                      strokeWidth="3.5"
+                      strokeDasharray={a.type === 'pass' ? '6,6' : a.type === 'dribble' ? '2,4' : 'none'}
+                      markerEnd={`url(#arrow-${a.type})`}
+                    />
+                  );
+                })}
 
                 {drawingArrow && (
                   <line 
