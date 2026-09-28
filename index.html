@@ -197,8 +197,6 @@
         return { x: mappedX, y: p.y };
       }
       if (mode === 'penalty') {
-        // Tor oben bei Y=5%, Anstoß unten bei Y=92%
-        // p.x (0..100) mappen wir auf Y (Höhe), p.y (0..100) mappen wir auf X (Breite)
         const mappedY = Math.max(8, Math.min(88, 92 - (p.x - 45) * 1.6));
         const mappedX = Math.max(8, Math.min(92, p.y));
         return { x: mappedX, y: mappedY };
@@ -208,17 +206,32 @@
 
     function App() {
       const [isMenuOpen, setIsMenuOpen] = useState(false);
-      const [boardMode, setBoardMode] = useState('full');
-      const [homeFormation, setHomeFormation] = useState('4-3-3');
-      const [awayFormation, setAwayFormation] = useState('4-4-2');
+
+      // --- PERSISTENTER STATE MIT LOCALSTORAGE ---
+      const [boardMode, setBoardMode] = useState(() => localStorage.getItem('tb_boardMode') || 'full');
+      const [homeFormation, setHomeFormation] = useState(() => localStorage.getItem('tb_homeFormation') || '4-3-3');
+      const [awayFormation, setAwayFormation] = useState(() => localStorage.getItem('tb_awayFormation') || '4-4-2');
       const [tool, setTool] = useState('select');
       const [arrowType, setArrowType] = useState('run');
       const [simSpeed, setSimSpeed] = useState(1);
-      const [notes, setNotes] = useState("• Flügel überladen & flach in den Rückraum legen\n• Zweite Bälle vor dem 16er sichern");
+      const [notes, setNotes] = useState(() => localStorage.getItem('tb_notes') ?? "• Flügel überladen & flach in den Rückraum legen\n• Zweite Bälle vor dem 16er sichern");
 
-      const [players, setPlayers] = useState(() => FORMATIONS["4-3-3"].home.concat(FORMATIONS["4-4-2"].away));
-      const [ball, setBall] = useState({ id: 'ball', x: 50, y: 50 });
-      const [arrows, setArrows] = useState([]);
+      const [players, setPlayers] = useState(() => {
+        const saved = localStorage.getItem('tb_players');
+        return saved ? JSON.parse(saved) : FORMATIONS["4-3-3"].home.concat(FORMATIONS["4-4-2"].away);
+      });
+
+      const [ball, setBall] = useState(() => {
+        const saved = localStorage.getItem('tb_ball');
+        return saved ? JSON.parse(saved) : { id: 'ball', x: 50, y: 50 };
+      });
+
+      const [arrows, setArrows] = useState(() => {
+        const saved = localStorage.getItem('tb_arrows');
+        return saved ? JSON.parse(saved) : [];
+      });
+
+      const [logo, setLogo] = useState(() => localStorage.getItem('tb_logo') || null);
 
       const [dragItem, setDragItem] = useState(null);
       const [drawingArrow, setDrawingArrow] = useState(null);
@@ -228,6 +241,30 @@
       const [startPosMap, setStartPosMap] = useState(null);
 
       const fieldRef = useRef(null);
+
+      // SPEICHER-EFFEKT: Speichert automatisch jede Änderung
+      useEffect(() => {
+        localStorage.setItem('tb_boardMode', boardMode);
+        localStorage.setItem('tb_homeFormation', homeFormation);
+        localStorage.setItem('tb_awayFormation', awayFormation);
+        localStorage.setItem('tb_notes', notes);
+        localStorage.setItem('tb_players', JSON.stringify(players));
+        localStorage.setItem('tb_ball', JSON.stringify(ball));
+        localStorage.setItem('tb_arrows', JSON.stringify(arrows));
+        if (logo) localStorage.setItem('tb_logo', logo);
+        else localStorage.removeItem('tb_logo');
+      }, [boardMode, homeFormation, awayFormation, notes, players, ball, arrows, logo]);
+
+      const handleLogoUpload = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+          const reader = new FileReader();
+          reader.onloadend = () => {
+            setLogo(reader.result);
+          };
+          reader.readAsDataURL(file);
+        }
+      };
 
       const handleFormationChange = (team, formation) => {
         if (team === 'home') {
@@ -374,6 +411,21 @@
         setStartPosMap(null);
       };
 
+      const handleFullReset = () => {
+        if (window.confirm("Möchtest du das gesamte Board und alle gespeicherten Laufwege/Notizen auf Werkseinstellungen zurücksetzen?")) {
+          localStorage.clear();
+          setBoardMode('full');
+          setHomeFormation('4-3-3');
+          setAwayFormation('4-4-2');
+          setPlayers(FORMATIONS["4-3-3"].home.concat(FORMATIONS["4-4-2"].away));
+          setBall({ id: 'ball', x: 50, y: 50 });
+          setArrows([]);
+          setNotes("• Flügel überladen & flach in den Rückraum legen\n• Zweite Bälle vor dem 16er sichern");
+          setLogo(null);
+          resetSimulation();
+        }
+      };
+
       return (
         <div className="flex flex-col lg:flex-row h-screen w-screen overflow-hidden bg-slate-950 text-slate-100 relative">
           
@@ -413,11 +465,16 @@
             ${isMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
           `}>
             <div className="flex items-center justify-between">
-              <div>
-                <h1 className="text-xl font-black text-emerald-400 tracking-tight flex items-center gap-2">
-                  ⚽ TAKTIKBOARD PRO
-                </h1>
-                <p className="text-xs text-slate-400 mt-0.5">Ganzes Feld, Halbfeld & Strafraum</p>
+              <div className="flex items-center gap-2">
+                {logo && (
+                  <img src={logo} alt="Team Logo" className="w-8 h-8 object-contain rounded bg-slate-950/50 p-0.5 border border-slate-800" />
+                )}
+                <div>
+                  <h1 className="text-xl font-black text-emerald-400 tracking-tight flex items-center gap-2">
+                    ⚽ TAKTIKBOARD PRO
+                  </h1>
+                  <p className="text-xs text-slate-400 mt-0.5">Ganzes Feld, Halbfeld & Strafraum</p>
+                </div>
               </div>
               <button 
                 onClick={() => setIsMenuOpen(false)}
@@ -425,6 +482,33 @@
               >
                 ✕
               </button>
+            </div>
+
+            {/* VEREINS-LOGO HOCHLADEN */}
+            <div className="space-y-1.5 bg-slate-950 p-3 rounded-xl border border-slate-800">
+              <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">Vereins-Logo</label>
+              <div className="flex items-center gap-3">
+                {logo ? (
+                  <div className="relative group w-11 h-11 bg-slate-900 border border-slate-800 rounded-lg p-1 flex items-center justify-center shrink-0">
+                    <img src={logo} alt="Logo" className="max-w-full max-h-full object-contain" />
+                    <button 
+                      onClick={() => setLogo(null)} 
+                      className="absolute -top-1.5 -right-1.5 bg-rose-600 text-white rounded-full w-4 h-4 flex items-center justify-center text-[9px] font-bold shadow"
+                      title="Logo entfernen"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ) : (
+                  <div className="w-11 h-11 bg-slate-900 border border-dashed border-slate-800 rounded-lg flex items-center justify-center text-slate-600 text-xs shrink-0">
+                    Kein Logo
+                  </div>
+                )}
+                <label className="flex-1 cursor-pointer bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-200 text-xs font-bold py-2 px-3 rounded-xl text-center transition flex items-center justify-center gap-1.5">
+                  🖼️ {logo ? 'Logo Ändern' : 'Logo Hochladen'}
+                  <input type="file" accept="image/*" onChange={handleLogoUpload} className="hidden" />
+                </label>
+              </div>
             </div>
 
             {/* Tafel-Auswahl */}
@@ -514,11 +598,11 @@
               </button>
 
               <div className="grid grid-cols-2 gap-2">
-                <button onClick={resetSimulation} className="py-2 bg-slate-800 hover:bg-slate-700 rounded-xl text-xs text-slate-300 font-bold transition">
-                  🔄 Reset
-                </button>
                 <button onClick={() => setArrows([])} className="py-2 bg-rose-950/40 hover:bg-rose-900/60 border border-rose-800/40 rounded-xl text-xs text-rose-300 font-bold transition">
                   🗑️ Pfeile weg
+                </button>
+                <button onClick={handleFullReset} className="py-2 bg-slate-800 hover:bg-slate-700 rounded-xl text-xs text-slate-300 font-bold transition">
+                  🔄 Werkseinstellung
                 </button>
               </div>
             </div>
@@ -537,6 +621,13 @@
                 backgroundImage: 'repeating-linear-gradient(90deg, #15803d 0px, #15803d 70px, #166534 70px, #166534 140px)'
               }}
             >
+              {/* LOGO ON BOARD (Oben rechts auf der Taktiktafel) */}
+              {logo && (
+                <div className="absolute top-3 right-3 sm:top-5 sm:right-5 z-20 pointer-events-none opacity-85 max-w-[45px] max-h-[45px] sm:max-w-[70px] sm:max-h-[70px] filter drop-shadow-lg">
+                  <img src={logo} alt="Vereinslogo" className="w-full h-full object-contain" />
+                </div>
+              )}
+
               {/* SPIELFELD-LINIEN */}
               <svg className="absolute inset-0 w-full h-full pointer-events-none stroke-white/80 fill-none" strokeWidth="2.5">
                 {boardMode === 'full' && (
@@ -572,29 +663,14 @@
 
                 {boardMode === 'penalty' && (
                   <>
-                    {/* Spielfeld-Rand exakt wie im Foto */}
                     <rect x="5%" y="5%" width="90%" height="87%" rx="2" />
-                    
-                    {/* Tor oben auf der Linie */}
                     <rect x="44%" y="1.5%" width="12%" height="3.5%" strokeWidth="2" fill="white/10" />
-                    
-                    {/* Fünfmeterraum (kleiner Kasten) */}
                     <rect x="36%" y="5%" width="28%" height="13%" strokeWidth="2.5" />
-                    
-                    {/* 16-Meter-Raum (großer Kasten) */}
                     <rect x="22%" y="5%" width="56%" height="32%" strokeWidth="2.5" />
-                    
-                    {/* Elfmeterpunkt */}
                     <circle cx="50%" cy="26%" r="0.8%" fill="white" />
-                    
-                    {/* Teilkreis unterhalb vom 16er */}
                     <path d="M 38% 37% A 13% 13% 0 0 0 62% 37%" strokeWidth="2.5" />
-                    
-                    {/* Anstoßkreis unten an der Mittellinie */}
                     <path d="M 41% 92% A 9% 9% 0 0 1 59% 92%" strokeWidth="2.5" />
                     <circle cx="50%" cy="92%" r="0.8%" fill="white" />
-                    
-                    {/* Eckkreis oben links */}
                     <path d="M 5% 8.5% A 3.5% 3.5% 0 0 0 8.5% 5%" strokeWidth="2" />
                   </>
                 )}
